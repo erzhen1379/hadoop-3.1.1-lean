@@ -1015,6 +1015,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   public DFSInputStream open(HdfsPathHandle fd, int buffersize,
       boolean verifyChecksum) throws IOException {
+    //检查hdfs client运行状态
     checkOpen();
     String src = fd.getPath();
     try (TraceScope ignored = newPathTraceScope("newDFSInputStream", src)) {
