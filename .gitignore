@@ -1,0 +1,5 @@
+# Project exclude paths
+/hadoop-common-project/hadoop-annotations/target/
+/hadoop-common-project/hadoop-auth/target/
+/hadoop-common-project/hadoop-common/target/
+/hadoop-hdfs-project/hadoop-hdfs-client/target/
