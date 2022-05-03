@@ -316,6 +316,11 @@ class BlockReaderLocal implements BlockReader {
     }
   }
 
+  /**
+   * 将dataBuf缓冲区中的数据拉取到buf中，然后返回读取的字节数
+   * @param buf
+   * @return
+   */
   private synchronized int drainDataBuf(ByteBuffer buf) {
     if (dataBuf == null) return -1;
     int oldLimit = dataBuf.limit();
@@ -343,6 +348,8 @@ class BlockReaderLocal implements BlockReader {
    * @param canSkipChecksum  True if we can skip checksumming.
    *
    * @return      Total bytes read.  0 on EOF.
+   *
+   * 将数据从输入流读入指定buf中，将校验和读入checksumBuf中进行校验操作
    */
   private synchronized int fillBuffer(ByteBuffer buf, boolean canSkipChecksum)
       throws IOException {
@@ -391,6 +398,10 @@ class BlockReaderLocal implements BlockReader {
     return total;
   }
 
+  /**
+   * 判读免校验上下文
+   * @return
+   */
   private boolean createNoChecksumContext() {
     return !verifyChecksum ||
         // Checksums are not stored for replicas on transient storage.  We do
@@ -410,6 +421,7 @@ class BlockReaderLocal implements BlockReader {
 
   @Override
   public synchronized int read(ByteBuffer buf) throws IOException {
+    //能否跳过数据校验
     boolean canSkipChecksum = createNoChecksumContext();
     try {
       String traceFormatStr = "read(buf.remaining={}, block={}, filename={}, "
@@ -418,9 +430,12 @@ class BlockReaderLocal implements BlockReader {
           buf.remaining(), block, filename, canSkipChecksum);
       int nRead;
       try {
+
         if (canSkipChecksum && zeroReadaheadRequested) {
+          //可以跳过数据校验，以及不需要预读取时，调用readWithoutBounceBuffer()方法
           nRead = readWithoutBounceBuffer(buf);
         } else {
+          //需要校验，以及开启预读时，调用readWithBounceBuffer()方法
           nRead = readWithBounceBuffer(buf, canSkipChecksum);
         }
       } catch (IOException e) {
@@ -436,11 +451,18 @@ class BlockReaderLocal implements BlockReader {
     }
   }
 
+  /**
+   *
+   * @param buf
+   * @return
+   * @throws IOException
+   */
   private synchronized int readWithoutBounceBuffer(ByteBuffer buf)
       throws IOException {
-    freeDataBufIfExists();
-    freeChecksumBufIfExists();
+    freeDataBufIfExists(); //释放dataBuffer
+    freeChecksumBufIfExists(); //释放checksumBuffer
     int total = 0;
+    //直接从输入流中将数据读取到buf
     while (buf.hasRemaining()) {
       int nRead = blockReaderIoProvider.read(dataIn, buf, dataPos);
       if (nRead <= 0) break;
@@ -464,6 +486,7 @@ class BlockReaderLocal implements BlockReader {
    * @param canSkipChecksum  true if we can skip checksumming.
    * @return                 true if we hit EOF.
    * @throws IOException
+   * 将数据读入dataBuf缓冲区中，将校验和读入checksumBuf缓冲区
    */
   private synchronized boolean fillDataBuf(boolean canSkipChecksum)
       throws IOException {
@@ -507,6 +530,7 @@ class BlockReaderLocal implements BlockReader {
   private synchronized int readWithBounceBuffer(ByteBuffer buf,
         boolean canSkipChecksum) throws IOException {
     int total = 0;
+    //调用drainDataBuf(),将dataBuf缓冲区中的数据写入buf
     int bb = drainDataBuf(buf); // drain bounce buffer if possible
     if (bb >= 0) {
       total += bb;
@@ -514,6 +538,7 @@ class BlockReaderLocal implements BlockReader {
     }
     boolean eof = true, done = false;
     do {
+      //如果buf的空间足够大，并且输入流游标在chunk边界上，则直接从IO流中将数据写入buf中
       if (buf.isDirect() && (buf.remaining() >= maxReadaheadLength)
             && ((dataPos % bytesPerChecksum) == 0)) {
         // Fast lane: try to read directly into user-supplied buffer, bypassing
@@ -535,9 +560,11 @@ class BlockReaderLocal implements BlockReader {
         total += nRead;
       } else {
         // Slow lane: refill bounce buffer.
+        //否则将数据写入dataBuf缓存中
         if (fillDataBuf(canSkipChecksum)) {
           done = true;
         }
+        //然后将dataBuf中数据导入buf中
         bb = drainDataBuf(buf); // drain bounce buffer if possible
         if (bb >= 0) {
           eof = false;

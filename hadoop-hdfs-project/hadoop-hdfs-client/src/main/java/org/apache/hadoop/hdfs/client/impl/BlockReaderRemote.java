@@ -178,11 +178,16 @@ public class BlockReaderRemote implements BlockReader {
     return nRead;
   }
 
+  /**
+   * 输入流中读取一个新的数据包，将数据写入curDataSlice中，并且进行校验和部分进行匹配。
+   * @throws IOException
+   */
   private void readNextPacket() throws IOException {
     //Read packet headers.
     packetReceiver.receiveNextPacket(in);
 
     PacketHeader curHeader = packetReceiver.getHeader();
+    //将数据包头读入curHeader变量中，将数据包写入curDataSlice
     curDataSlice = packetReceiver.getDataSlice();
     assert curDataSlice.capacity() == curHeader.getDataLen();
 
