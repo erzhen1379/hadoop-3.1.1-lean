@@ -342,6 +342,17 @@ class DataXceiver extends Receiver implements Runnable {
     }
   }
 
+  /**
+   *
+   * @param blk             The block to get file descriptors for.
+   * @param token
+   * @param slotId          The shared memory slot id to use, or null
+   *                          to use no slot id.
+   * @param maxVersion      Maximum version of the block data the client
+   *                          can understand.
+   * @param supportsReceiptVerification  True if the client supports
+   * @throws IOException
+   */
   @Override
   public void requestShortCircuitFds(final ExtendedBlock blk,
       final Token<BlockTokenIdentifier> token,
@@ -358,6 +369,7 @@ class DataXceiver extends Receiver implements Runnable {
     boolean success = false;
     try {
       try {
+        //如果底层不是DomainSocket，则抛出异常
         if (peer.getDomainSocket() == null) {
           throw new IOException("You cannot pass file descriptors over " +
               "anything but a UNIX domain socket.");
@@ -365,12 +377,15 @@ class DataXceiver extends Receiver implements Runnable {
         if (slotId != null) {
           boolean isCached = datanode.data.
               isCached(blk.getBlockPoolId(), blk.getBlockId());
+          //调用shortCircuitRegistry.registerSlot()方法在dn共享内存中注册这个sloth对象
           datanode.shortCircuitRegistry.registerSlot(
               ExtendedBlockId.fromExtendedBlock(blk), slotId, isCached);
           registeredSlotId = slotId;
         }
+        //获取数据块文件以及校验和文件描述符
         fis = datanode.requestShortCircuitFdsForRead(blk, token, maxVersion);
         Preconditions.checkState(fis != null);
+        //构造响应消息
         bld.setStatus(SUCCESS);
         bld.setShortCircuitAccessVersion(DataNode.CURRENT_BLOCK_FORMAT_VERSION);
       } catch (ShortCircuitFdsVersionException e) {
@@ -386,6 +401,7 @@ class DataXceiver extends Receiver implements Runnable {
         LOG.error("Request short-circuit read file descriptor" +
             " failed with unknown error.", e);
       }
+      //发回成功的响应消息
       bld.build().writeDelimitedTo(socketOut);
       if (fis != null) {
         FileDescriptor fds[] = new FileDescriptor[fis.length];
@@ -440,6 +456,7 @@ class DataXceiver extends Receiver implements Runnable {
       String error;
       Status status;
       try {
+        //释放内存中的槽位
         datanode.shortCircuitRegistry.unregisterSlot(slotId);
         error = null;
         status = Status.SUCCESS;
@@ -450,12 +467,14 @@ class DataXceiver extends Receiver implements Runnable {
         error = e.getMessage();
         status = Status.ERROR_INVALID;
       }
+      //构造响应消息
       ReleaseShortCircuitAccessResponseProto.Builder bld =
           ReleaseShortCircuitAccessResponseProto.newBuilder();
       bld.setStatus(status);
       if (error != null) {
         bld.setError(error);
       }
+      //发回响应消息
       bld.build().writeDelimitedTo(socketOut);
       success = true;
     } finally {
