@@ -488,12 +488,19 @@ class DataXceiver extends Receiver implements Runnable {
     sock.sendFileDescriptors(shmFdArray, buf, 0, buf.length);
   }
 
+  /**
+   *
+   * @param clientName       The name of the client.
+   * @throws IOException
+   */
   @Override
   public void requestShortCircuitShm(String clientName) throws IOException {
     NewShmInfo shmInfo = null;
     boolean success = false;
+    //获取地层DomainSocket对象
     DomainSocket sock = peer.getDomainSocket();
     try {
+      //如果DataTransferProtocol底层不是DomainSocket,则发回异常
       if (sock == null) {
         sendShmErrorResponse(ERROR_INVALID, "Bad request from " +
             peer + ": must request a shared " +
@@ -501,21 +508,23 @@ class DataXceiver extends Receiver implements Runnable {
         return;
       }
       try {
+        //shortCircuitRegistry.createNewMemorySegment()创建共享内存段
         shmInfo = datanode.shortCircuitRegistry.
             createNewMemorySegment(clientName, sock);
         // After calling #{ShortCircuitRegistry#createNewMemorySegment}, the
         // socket is managed by the DomainSocketWatcher, not the DataXceiver.
         releaseSocket();
-      } catch (UnsupportedOperationException e) {
+      } catch (UnsupportedOperationException e) {//抛出异常，则相应异常
         sendShmErrorResponse(ERROR_UNSUPPORTED, 
             "This datanode has not been configured to support " +
             "short-circuit shared memory segments.");
         return;
-      } catch (IOException e) {
+      } catch (IOException e) {//抛出异常，则相应异常
         sendShmErrorResponse(ERROR,
             "Failed to create shared file descriptor: " + e.getMessage());
         return;
       }
+      //调用sendShmSuccessResponse()方法创建共享内存段
       sendShmSuccessResponse(sock, shmInfo);
       success = true;
     } finally {
