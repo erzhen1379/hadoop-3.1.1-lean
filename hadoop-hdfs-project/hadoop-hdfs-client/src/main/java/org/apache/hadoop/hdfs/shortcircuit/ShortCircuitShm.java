@@ -47,6 +47,7 @@ import javax.annotation.Nonnull;
 
 /**
  * A shared memory segment used to implement short-circuit reads.
+ * 用来抽象短路读取用到的一段共享内存，这段共享内存中会有多个槽位，每个槽位保存一个短路读副本的信息。
  */
 public class ShortCircuitShm {
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -251,20 +252,24 @@ public class ShortCircuitShm {
      * is no longer valid.  The client itself also clears this flag when it
      * believes that the DataNode is no longer using this slot to communicate.
      */
+    //标识slot是否有效
     private static final long VALID_FLAG =          1L<<63;
 
     /**
      * Flag indicating that the slot can be anchored.
      */
+    //当dn将slot对应副本通过mlock操作到缓存到内存中，就会设置这个标志
     private static final long ANCHORABLE_FLAG =     1L<<62;
 
     /**
      * The slot address in memory.
+     * 保存当前slot在内存中地址：
      */
     private final long slotAddress;
 
     /**
      * BlockId of the block this slot is used for.
+     * 当前slot对应的短路读取的数据块id
      */
     private final ExtendedBlockId blockId;
 
@@ -322,13 +327,20 @@ public class ShortCircuitShm {
       return (prev & flag) != 0;
     }
 
+    /**
+     *
+     * @param flag
+     */
     private void setFlag(long flag) {
       long prev;
       do {
+        //通过调用native方法，从内存中获取8字节
         prev = unsafe.getLongVolatile(null, this.slotAddress);
+        //进行与操作，如果结果不为空，则证明标识为已经设置
         if ((prev & flag) != 0) {
           return;
         }
+        //否则，就将当前值与flag进行或操作，也就添加标识位
       } while (!unsafe.compareAndSwapLong(null, this.slotAddress,
                   prev, prev | flag));
     }
@@ -387,17 +399,21 @@ public class ShortCircuitShm {
       do {
         prev = unsafe.getLongVolatile(null, this.slotAddress);
         if ((prev & VALID_FLAG) == 0) {
+          //slot不是有效的，直接返回false
           // Slot is no longer valid.
           return false;
         }
         if ((prev & ANCHORABLE_FLAG) == 0) {
           // Slot can't be anchored right now.
+          //slot 并不是可锚的，直接返回false
           return false;
         }
         if ((prev & 0x7fffffff) == 0x7fffffff) {
           // Too many other threads have anchored the slot (2 billion?)
+          //太多线程锚定了这个slot
           return false;
         }
+        //否则，增加当前slot的锚次数
       } while (!unsafe.compareAndSwapLong(null, this.slotAddress,
                   prev, prev + 1));
       return true;
@@ -430,11 +446,13 @@ public class ShortCircuitShm {
 
   /**
    * The base address of the memory-mapped file.
+   * 内存映射文件的起始地址
    */
   private final long baseAddress;
 
   /**
    * The mmapped length of the shared memory segment
+   * 内存映射文件的长度
    */
   private final int mmappedLength;
 
@@ -442,11 +460,13 @@ public class ShortCircuitShm {
    * The slots associated with this shared memory segment.
    * slot[i] contains the slot at offset i * BYTES_PER_SLOT,
    * or null if that slot is not allocated.
+   * 保存共享内存中所有slot对象
    */
   private final Slot slots[];
 
   /**
    * A bitset where each bit represents a slot which is in use.
+   * :一个bitmap用来标识slots数组中那些位置被占用，这里积累BitSet的使用
    */
   private final BitSet allocatedSlots;
 
@@ -479,9 +499,11 @@ public class ShortCircuitShm {
           "load misc.Unsafe.");
     }
     this.shmId = shmId;
+    //是内存内存共享是通过mmap方式,打开同一个文件,并且进行内存映射
     this.mmappedLength = getUsableLength(stream);
     this.baseAddress = POSIX.mmap(stream.getFD(),
         POSIX.MMAP_PROT_READ | POSIX.MMAP_PROT_WRITE, true, mmappedLength);
+    //每个slot是8字节,这里通过文件的大小计算出当前共享内存有多少slot
     this.slots = new Slot[mmappedLength / BYTES_PER_SLOT];
     this.allocatedSlots = new BitSet(slots.length);
     LOG.trace("creating {}(shmId={}, mmappedLength={}, baseAddress={}, "
@@ -533,11 +555,13 @@ public class ShortCircuitShm {
    */
   synchronized public final Slot allocAndRegisterSlot(
       ExtendedBlockId blockId) {
+    //获取第一个空闲位置,使用BitSet
     int idx = allocatedSlots.nextClearBit(0);
     if (idx >= slots.length) {
       throw new RuntimeException(this + ": no more slots are available.");
     }
     allocatedSlots.set(idx, true);
+    //构造slot对象,然后放入slots字段中
     Slot slot = new Slot(calculateSlotAddress(idx), blockId);
     slot.clear();
     slot.makeValid();
@@ -610,6 +634,7 @@ public class ShortCircuitShm {
     Preconditions.checkState(allocatedSlots.get(slotIdx),
         "tried to unregister slot " + slotIdx + ", which was not registered.");
     allocatedSlots.set(slotIdx, false);
+    //将slot数组中对应的槽位设置为null
     slots[slotIdx] = null;
     LOG.trace("{}: unregisterSlot {}", this, slotIdx);
   }
