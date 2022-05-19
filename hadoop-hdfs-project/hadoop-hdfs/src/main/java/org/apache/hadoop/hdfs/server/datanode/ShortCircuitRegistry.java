@@ -79,12 +79,16 @@ import com.google.common.collect.HashMultimap;
  * clients from initiating these operations in the future.
  * 
  * The counterpart of this class on the client is {@link DfsClientShmManager}.
+ *
  */
 public class ShortCircuitRegistry {
   public static final Log LOG = LogFactory.getLog(ShortCircuitRegistry.class);
 
   private static final int SHM_LENGTH = 8192;
 
+  /**
+   * 是ShortCircuitShm子类，描述datanode测一段共享内存
+   */
   public static class RegisteredShm extends ShortCircuitShm
       implements DomainSocketWatcher.Handler {
     private final String clientName;
@@ -101,6 +105,7 @@ public class ShortCircuitRegistry {
     public boolean handle(DomainSocket sock) {
       synchronized (registry) {
         synchronized (this) {
+          //调用RegisteredShm.removeShm()方法处理domainSokcet关闭的情况
           registry.removeShm(this);
         }
       }
@@ -112,6 +117,10 @@ public class ShortCircuitRegistry {
     }
   }
 
+  /**
+   * 用于从ShortCircuitRegistry类中删除一段共享内存
+   * @param shm
+   */
   public synchronized void removeShm(ShortCircuitShm shm) {
     if (LOG.isTraceEnabled()) {
       LOG.trace("removing shm " + shm);
@@ -199,6 +208,7 @@ public class ShortCircuitRegistry {
    * Process a block mlock event from the FsDatasetCache.
    *
    * @param blockId    The block that was mlocked.
+   *用于缓存数据块对应的slot对象中添加可锚状态
    */
   public synchronized void processBlockMlockEvent(ExtendedBlockId blockId) {
     if (!enabled) return;
@@ -213,6 +223,7 @@ public class ShortCircuitRegistry {
    *
    * @param blockId        The block ID.
    * @return               True if we should allow the munlock request.
+   * 用于缓存数据块对应的slot对象删除可锚状态
    */
   public synchronized boolean processBlockMunlockRequest(
       ExtendedBlockId blockId) {
@@ -298,6 +309,7 @@ public class ShortCircuitRegistry {
    * @return              A NewShmInfo object.  The caller must close the
    *                        NewShmInfo object once they are done with it.
    * @throws IOException  If the new memory segment could not be created.
+   * 用于在dn侧后见共享内存，将文件映射内存中，然后创建一个RegisteredShm对象管理该共享内存，并将RegisteredShm对象加入到ShortCircuitRegistry.segments字段中保持
    */
   public NewShmInfo createNewMemorySegment(String clientName,
       DomainSocket sock) throws IOException {
@@ -335,7 +347,14 @@ public class ShortCircuitRegistry {
     }
     return info;
   }
-  
+
+  /**
+   * 在dn 共享内存中添加一个slot对象
+   * @param blockId
+   * @param slotId
+   * @param isCached
+   * @throws InvalidRequestException
+   */
   public synchronized void registerSlot(ExtendedBlockId blockId, SlotId slotId,
       boolean isCached) throws InvalidRequestException {
     if (!enabled) {
