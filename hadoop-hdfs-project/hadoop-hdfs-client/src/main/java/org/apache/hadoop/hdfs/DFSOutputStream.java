@@ -254,15 +254,32 @@ public class DFSOutputStream extends FSOutputSummer
     }
   }
 
+  /**
+   *
+   * @param dfsClient
+   * @param src
+   * @param masked
+   * @param flag
+   * @param createParent
+   * @param replication
+   * @param blockSize
+   * @param progress
+   * @param checksum
+   * @param favoredNodes
+   * @param ecPolicyName
+   * @return
+   * @throws IOException
+   */
   static DFSOutputStream newStreamForCreate(DFSClient dfsClient, String src,
       FsPermission masked, EnumSet<CreateFlag> flag, boolean createParent,
       short replication, long blockSize, Progressable progress,
       DataChecksum checksum, String[] favoredNodes, String ecPolicyName)
       throws IOException {
+    //调用dfsClient.newPathTraceScope() 方法，在命名空间中创建HDFS文件
     try (TraceScope ignored =
              dfsClient.newPathTraceScope("newStreamForCreate", src)) {
       HdfsFileStatus stat = null;
-
+      LOG.debug("在namenode中创建路径"+src);
       // Retry the create if we get a RetryStartFileException up to a maximum
       // number of times
       boolean shouldRetry = true;
@@ -301,9 +318,11 @@ public class DFSOutputStream extends FSOutputSummer
           }
         }
       }
+      //
       Preconditions.checkNotNull(stat, "HdfsFileStatus should not be null!");
       final DFSOutputStream out;
       if(stat.getErasureCodingPolicy() != null) {
+        //调用构造方法创建DFSStripedOutputStream对象
         out = new DFSStripedOutputStream(dfsClient, src, stat,
             flag, progress, checksum, favoredNodes);
       } else {

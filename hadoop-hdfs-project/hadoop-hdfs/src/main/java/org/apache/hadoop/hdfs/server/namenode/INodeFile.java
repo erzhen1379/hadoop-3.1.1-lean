@@ -234,6 +234,13 @@ public class INodeFile extends INodeWithAdditionalFields
       return layoutRedundancy;
     }
 
+    /**
+     * 前4个比特存储信息策略,中间12个 文件备份系数信息,后48个比特的数据块大小信息
+     * @param preferredBlockSize
+     * @param layoutRedundancy
+     * @param storagePolicyID
+     * @return
+     */
     static long toLong(long preferredBlockSize, long layoutRedundancy,
         byte storagePolicyID) {
       long h = 0;
@@ -247,9 +254,9 @@ public class INodeFile extends INodeWithAdditionalFields
     }
 
   }
-
+  //文件头header字段和文件对应的数据块信息(当前文件副本,文件块的大小)
   private long header = 0L;
-
+  //保存当前文件对应的所有文件数据块的信息
   private BlockInfo[] blocks;
 
   INodeFile(long id, byte[] name, PermissionStatus permissions, long mtime,
@@ -265,6 +272,7 @@ public class INodeFile extends INodeWithAdditionalFields
     super(id, name, permissions, mtime, atime);
     final long layoutRedundancy = HeaderFormat.getBlockLayoutRedundancy(
         blockType, replication, ecPolicyID);
+
     header = HeaderFormat.toLong(preferredBlockSize, layoutRedundancy,
         storagePolicyID);
     if (blklist != null && blklist.length > 0) {

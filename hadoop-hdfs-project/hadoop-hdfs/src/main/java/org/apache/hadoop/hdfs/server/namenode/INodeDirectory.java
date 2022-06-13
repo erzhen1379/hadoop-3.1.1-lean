@@ -184,6 +184,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
    * otherwise, return null.
    */
   public final DirectoryWithQuotaFeature getDirectoryWithQuotaFeature() {
+    //调用getDirectoryWithQuotaFeature()方法从Feature集合中查找Feature对象
     return getFeature(DirectoryWithQuotaFeature.class);
   }
 
@@ -194,7 +195,9 @@ public class INodeDirectory extends INodeWithAdditionalFields
 
   DirectoryWithQuotaFeature addDirectoryWithQuotaFeature(
       DirectoryWithQuotaFeature q) {
+    //传入DirectoryWithQuotaFeature对象
     Preconditions.checkState(!isWithQuota(), "Directory is already with quota");
+    //调用addFeature()方法添加到features集合中
     addFeature(q);
     return q;
   }
@@ -520,11 +523,12 @@ public class INodeDirectory extends INodeWithAdditionalFields
    * @return true if the child is removed; false if the child is not found.
    */
   public boolean removeChild(final INode child) {
+    //搜索到INode节点在children位置
     final int i = searchChildren(child.getLocalNameBytes());
     if (i < 0) {
       return false;
     }
-
+    //从children列表中删除
     final INode removed = children.remove(i);
     Preconditions.checkState(removed == child);
     return true;
@@ -564,10 +568,12 @@ public class INodeDirectory extends INodeWithAdditionalFields
   }
 
   public boolean addChild(INode node) {
+    //首先找到INode节点在children列表中的位置
     final int low = searchChildren(node.getLocalNameBytes());
     if (low >= 0) {
       return false;
     }
+    //调用addChild()方法将INode节点插入到children列表的low位置
     addChild(node, low);
     return true;
   }
