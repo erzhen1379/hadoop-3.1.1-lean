@@ -114,7 +114,7 @@ public abstract class INodeReference extends INode {
     }
     return Snapshot.NO_SNAPSHOT_ID;
   }
-  
+  //指向的Inode节点
   private INode referred;
   
   public INodeReference(INode parent, INode referred) {
@@ -363,8 +363,9 @@ public abstract class INodeReference extends INode {
   }
   
   /** An anonymous reference with reference count. */
-  public static class WithCount extends INodeReference {
 
+  public static class WithCount extends INodeReference {
+//保存所有指向这个withcount 对象的withname对象的集合
     private final List<WithName> withNameList = new ArrayList<>();
 
     /**
@@ -380,8 +381,10 @@ public abstract class INodeReference extends INode {
     };
     
     public WithCount(INodeReference parent, INode referred) {
+      //调用父类的构造方法，指向文件系统目录中的Inode
       super(parent, referred);
       Preconditions.checkArgument(!referred.isReference());
+      //设置真实的Inode的父节点为当前withcount
       referred.setParentReference(this);
     }
     
@@ -395,6 +398,7 @@ public abstract class INodeReference extends INode {
 
     /** Increment and then return the reference count. */
     public void addReference(INodeReference ref) {
+      //如果是withname对象，则加入wihtnamelist中
       if (ref instanceof WithName) {
         WithName refWithName = (WithName) ref;
         int i = Collections.binarySearch(withNameList, refWithName,
@@ -402,6 +406,7 @@ public abstract class INodeReference extends INode {
         Preconditions.checkState(i < 0);
         withNameList.add(-i - 1, refWithName);
       } else if (ref instanceof DstReference) {
+        //如果是DstReference对象，则设置为父节点
         setParentReference(ref);
       }
     }

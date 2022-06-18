@@ -205,12 +205,19 @@ public class INodeDirectory extends INodeWithAdditionalFields
   int searchChildren(byte[] name) {
     return children == null? -1: Collections.binarySearch(children, name);
   }
-  
+
+  /**
+   *
+   * @param diffs
+   * @return
+   */
   public DirectoryWithSnapshotFeature addSnapshotFeature(
       DirectoryDiffList diffs) {
     Preconditions.checkState(!isWithSnapshot(), 
         "Directory is already with snapshot");
+    //构建DirectoryWithSnapshotFeature特性
     DirectoryWithSnapshotFeature sf = new DirectoryWithSnapshotFeature(diffs);
+    //将DirectoryWithSnapshotFeature特性加到INodeDirectory特性列表中
     addFeature(sf);
     return sf;
   }
@@ -279,10 +286,21 @@ public class INodeDirectory extends INodeWithAdditionalFields
     getDirectorySnapshottableFeature().setSnapshotQuota(snapshotQuota);
   }
 
+  /**
+   *
+   * @param id
+   * @param name
+   * @param leaseManager
+   * @param captureOpenFiles
+   * @param maxSnapshotLimit
+   * @return
+   * @throws SnapshotException
+   */
   public Snapshot addSnapshot(int id, String name,
       final LeaseManager leaseManager, final boolean captureOpenFiles,
       int maxSnapshotLimit)
       throws SnapshotException {
+    //添加一个快照到当前目录
     return getDirectorySnapshottableFeature().addSnapshot(this, id, name,
         leaseManager, captureOpenFiles, maxSnapshotLimit);
   }

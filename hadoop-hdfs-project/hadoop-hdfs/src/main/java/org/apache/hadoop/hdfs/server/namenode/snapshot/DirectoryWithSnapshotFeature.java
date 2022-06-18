@@ -132,8 +132,10 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
   public static class DirectoryDiff extends
       AbstractINodeDiff<INodeDirectory, INodeDirectoryAttributes, DirectoryDiff> {
     /** The size of the children list at snapshot creation time. */
+    //创建快照时，INodeDirectory子目录项的数目
     private final int childrenSize;
     /** The children list diff. */
+    //子目录项的diff
     private final ChildrenDiff diff;
     private boolean isSnapshotRoot = false;
     
@@ -144,7 +146,9 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
     public DirectoryDiff(int snapshotId, INodeDirectory dir,
         ChildrenDiff diff) {
       super(snapshotId, null, null);
+      //获取快照建立时，子目录的个数
       this.childrenSize = dir.getChildrenList(Snapshot.CURRENT_STATE_ID).size();
+      //构建一个新的childrendiff对象，记录DirectoryDiff.children字段的变化
       this.diff = diff;
     }
     /** Constructor used by FSImage loading */

@@ -167,11 +167,23 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
   }
 
   /** Add a snapshot. */
+  /**
+   *
+   * @param snapshotRoot
+   * @param id   保存快照id
+   * @param name
+   * @param leaseManager
+   * @param captureOpenFiles
+   * @param maxSnapshotLimit  快照的配额
+   * @return
+   * @throws SnapshotException
+   */
   public Snapshot addSnapshot(INodeDirectory snapshotRoot, int id, String name,
       final LeaseManager leaseManager, final boolean captureOpenFiles,
       int maxSnapshotLimit)
       throws SnapshotException {
     //check snapshot quota
+    //检查目录的快照数量是否超出配额
     final int n = getNumSnapshots();
     if (n + 1 > snapshotQuota) {
       throw new SnapshotException("Failed to add snapshot: there are already "
@@ -183,6 +195,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
               + " snapshot(s) and the max snapshot limit is "
               + maxSnapshotLimit);
     }
+    //创建一个snapshot对象
     final Snapshot s = new Snapshot(id, name, snapshotRoot);
     final byte[] nameBytes = s.getRoot().getLocalNameBytes();
     final int i = searchSnapshot(nameBytes);
@@ -190,12 +203,14 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
       throw new SnapshotException("Failed to add snapshot: there is already a "
           + "snapshot with the same name \"" + Snapshot.getSnapshotName(s) + "\".");
     }
-
+     //创建当前快照对应DirectoryDiff对象
     final DirectoryDiff d = getDiffs().addDiff(id, snapshotRoot);
     d.setSnapshotRoot(s.getRoot());
+    //将snapshot对象放入到snapshotsByNames中
     snapshotsByNames.add(-i - 1, s);
 
-    // set modification time
+    // set modification time\
+    //更新modification
     final long now = Time.now();
     snapshotRoot.updateModificationTime(now, Snapshot.CURRENT_STATE_ID);
     s.getRoot().setModificationTime(now, Snapshot.CURRENT_STATE_ID);

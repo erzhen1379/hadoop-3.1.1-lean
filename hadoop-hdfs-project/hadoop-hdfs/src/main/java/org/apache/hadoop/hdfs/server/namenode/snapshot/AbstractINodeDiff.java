@@ -50,14 +50,17 @@ abstract class AbstractINodeDiff<N extends INode,
     implements Comparable<Integer> {
 
   /** The id of the corresponding snapshot. */
+  //1. 当前AbstractINodeDiff对象对应的快照id
   private int snapshotId;
   /** The snapshot inode data.  It is null when there is no change. */
+  //快照对应的inode的数据，如果没有变化则为null
   A snapshotINode;
   /**
    * Posterior diff is the diff happened after this diff.
    * The posterior diff should be first applied to obtain the posterior
    * snapshot and then apply this diff in order to obtain this snapshot.
-   * If the posterior diff is null, the posterior state is the current state. 
+   * If the posterior diff is null, the posterior state is the current state.
+   * 下一个快照版本与当前快照版本之间的差异的AbstractINodeDiff
    */
   private D posteriorDiff;
 
