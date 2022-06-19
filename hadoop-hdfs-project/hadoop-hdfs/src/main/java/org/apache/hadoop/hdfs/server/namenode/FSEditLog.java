@@ -251,15 +251,23 @@ public class FSEditLog implements LogsPurgeable {
 
     this.sharedEditsDirs = FSNamesystem.getSharedEditsDirs(conf);
   }
-  
+
+  /**
+   *
+   */
   public synchronized void initJournalsForWrite() {
+    //检查之前的状态
     Preconditions.checkState(state == State.UNINITIALIZED ||
         state == State.CLOSED, "Unexpected state: %s", state);
-    
+    //调用initJournals()方法
     initJournals(this.editsDirs);
+    //状态转为BETWEEN_LOG_SEGMENTS
     state = State.BETWEEN_LOG_SEGMENTS;
   }
-  
+
+  /**
+   * 该方法在ha的情况下，将FSEditLog的状态从UNINITIALIZED状态转为OPEN_FOR_READING状态，存储目录是由active namenode 跟standby namenode共享读取。
+   */
   public synchronized void initSharedJournalsForRead() {
     if (state == State.OPEN_FOR_READING) {
       LOG.warn("Initializing shared journals for READ, already open for READ",
@@ -268,29 +276,36 @@ public class FSEditLog implements LogsPurgeable {
     }
     Preconditions.checkState(state == State.UNINITIALIZED ||
         state == State.CLOSED);
-    
+    //对于HA的情况，editlog存储目录为共享目录sharedEditsDirs
     initJournals(this.sharedEditsDirs);
     state = State.OPEN_FOR_READING;
   }
-  
+
+  /**
+   *
+   * @param dirs
+   */
   private synchronized void initJournals(List<URI> dirs) {
     int minimumRedundantJournals = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_MINIMUM_KEY,
         DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_MINIMUM_DEFAULT);
 
     synchronized(journalSetLock) {
+      //初始化JournalSet集合，存放到存储路径对应所有的JournalManager
       journalSet = new JournalSet(minimumRedundantJournals);
-
+      //根据传入的URL获取对应的JournalManager对象
       for (URI u : dirs) {
         boolean required = FSNamesystem.getRequiredNamespaceEditsDirs(conf)
             .contains(u);
         if (u.getScheme().equals(NNStorage.LOCAL_URI_SCHEME)) {
           StorageDirectory sd = storage.getStorageDirectory(u);
           if (sd != null) {
+            //本地URI,则加入FileJournalManager中
             journalSet.add(new FileJournalManager(conf, sd, storage),
                 required, sharedEditsDirs.contains(u));
           }
         } else {
+          //否则根据URI创建对应的FileJournalManager对象，并且放入journalSet
           journalSet.add(createJournal(u), required,
               sharedEditsDirs.contains(u));
         }
@@ -317,10 +332,11 @@ public class FSEditLog implements LogsPurgeable {
   synchronized void openForWrite(int layoutVersion) throws IOException {
     Preconditions.checkState(state == State.BETWEEN_LOG_SEGMENTS,
         "Bad state: %s", state);
-
+//返回最好一个写入log的txid+1作为本次操作的txid
     long segmentTxId = getLastWrittenTxId() + 1;
     // Safety check: we should never start a segment if there are
     // newer txids readable.
+    //这里判断，有没有包含这个新的segmentTxid的editlog文件，如果有则抛出异常
     List<EditLogInputStream> streams = new ArrayList<EditLogInputStream>();
     journalSet.selectInputStreams(streams, segmentTxId, true, false);
     if (!streams.isEmpty()) {
@@ -331,7 +347,7 @@ public class FSEditLog implements LogsPurgeable {
           streams.toArray(new EditLogInputStream[0]));
       throw new IllegalStateException(error);
     }
-    
+    //调用startLogSegmentAndWriteHeaderTxn方法
     startLogSegmentAndWriteHeaderTxn(segmentTxId, layoutVersion);
     assert state == State.IN_SEGMENT : "Bad state: " + state;
   }
