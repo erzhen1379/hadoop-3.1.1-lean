@@ -50,8 +50,11 @@ public class EditsDoubleBuffer {
   private final int initBufferSize;
 
   public EditsDoubleBuffer(int defaultBufferSize) {
+    //正在写入的缓冲区
     initBufferSize = defaultBufferSize;
+    //准备好同步的缓冲区
     bufCurrent = new TxnBuffer(initBufferSize);
+    //缓冲区大小
     bufReady = new TxnBuffer(initBufferSize);
 
   }
@@ -81,6 +84,7 @@ public class EditsDoubleBuffer {
   
   public void setReadyToFlush() {
     assert isFlushed() : "previous data not flushed yet";
+    //交换2个缓冲区
     TxnBuffer tmp = bufReady;
     bufReady = bufCurrent;
     bufCurrent = tmp;
@@ -91,7 +95,9 @@ public class EditsDoubleBuffer {
    * and resets it. Does not swap any buffers.
    */
   public void flushTo(OutputStream out) throws IOException {
+    //将同步缓存中数据写入文件
     bufReady.writeTo(out); // write data to file
+    //将同步缓存中保存的数据清空
     bufReady.reset(); // erase all data in the buffer
   }
   

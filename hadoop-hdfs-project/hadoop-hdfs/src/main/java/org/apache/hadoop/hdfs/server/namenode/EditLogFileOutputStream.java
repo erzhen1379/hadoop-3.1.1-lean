@@ -44,11 +44,15 @@ import com.google.common.annotations.VisibleForTesting;
 public class EditLogFileOutputStream extends EditLogOutputStream {
   private static final Log LOG = LogFactory.getLog(EditLogFileOutputStream.class);
   public static final int MIN_PREALLOCATION_LENGTH = 1024 * 1024;
-
+  //输出流对应的editlog
   private File file;
+  //editlog文件对应输出流
   private FileOutputStream fp; // file stream for storing edit logs
+  //editlog文件对应的输出流通到
   private FileChannel fc; // channel of the file stream for sync
+  //2个缓冲区
   private EditsDoubleBuffer doubleBuf;
+  //扩充editlog文件大小的数据块
   static final ByteBuffer fill = ByteBuffer.allocateDirect(MIN_PREALLOCATION_LENGTH);
   private boolean shouldSyncWritesAndSkipFsync = false;
 

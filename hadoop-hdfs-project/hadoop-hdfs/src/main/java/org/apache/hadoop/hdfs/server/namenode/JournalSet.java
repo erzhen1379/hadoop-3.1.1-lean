@@ -380,6 +380,7 @@ public class JournalSet implements JournalManager {
       JournalClosure closure, String status) throws IOException{
 
     List<JournalAndStream> badJAS = Lists.newLinkedList();
+    //遍历journals字段中保存的所有JournalAndStream对象
     for (JournalAndStream jas : journals) {
       try {
         closure.apply(jas);

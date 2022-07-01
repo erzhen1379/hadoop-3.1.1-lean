@@ -155,6 +155,7 @@ public class FSEditLog implements LogsPurgeable {
   
   //initialize
   private JournalSet journalSet = null;
+  //
   private EditLogOutputStream editLogStream = null;
 
   // a monotonically increasing counter that represents transactionIds.
@@ -405,20 +406,23 @@ public class FSEditLog implements LogsPurgeable {
       LOG.debug("Closing log when already closed");
       return;
     }
-
     try {
       if (state == State.IN_SEGMENT) {
         assert editLogStream != null;
+        //如果有sync操作，则等待sync操作完成
         waitForSyncToFinish();
+        //结束当前logsegment
         endCurrentLogSegment(true);
       }
     } finally {
+      //关闭journalSet
       if (journalSet != null && !journalSet.isEmpty()) {
         try {
           synchronized(journalSetLock) {
             journalSet.close();
           }
         } catch (IOException ioe) {
+          //将状态更改为close
           LOG.warn("Error closing journalSet", ioe);
         }
       }
@@ -1373,7 +1377,7 @@ public class FSEditLog implements LogsPurgeable {
   private void startLogSegment(final long segmentTxId, int layoutVersion)
       throws IOException {
     assert Thread.holdsLock(this);
-
+    //检查条件代码
     LOG.info("Starting log segment at " + segmentTxId);
     Preconditions.checkArgument(segmentTxId > 0,
         "Bad txid: %s", segmentTxId);
