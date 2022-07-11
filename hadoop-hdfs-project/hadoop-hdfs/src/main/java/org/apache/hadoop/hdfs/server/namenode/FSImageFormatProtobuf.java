@@ -508,6 +508,7 @@ public final class FSImageFormatProtobuf {
     private long saveInternal(FileOutputStream fout,
         FSImageCompression compression, String filePath) throws IOException {
       StartupProgress prog = NameNode.getStartupProgress();
+      //构造输出流，一边写数据，一边写校验值
       MessageDigest digester = MD5Hash.getDigester();
 
       underlyingOutputStream = new DigestOutputStream(new BufferedOutputStream(
@@ -515,12 +516,12 @@ public final class FSImageFormatProtobuf {
       underlyingOutputStream.write(FSImageUtil.MAGIC_HEADER);
 
       fileChannel = fout.getChannel();
-
+      //FileSummary 为fsimage文件的描述部分，也是protobuf定义的
       FileSummary.Builder b = FileSummary.newBuilder()
           .setOndiskVersion(FSImageUtil.FILE_VERSION)
           .setLayoutVersion(
               context.getSourceNamesystem().getEffectiveLayoutVersion());
-
+      //获取压缩格式，并装饰输出流
       codec = compression.getImageCodec();
       if (codec != null) {
         b.setCodec(codec.getClass().getCanonicalName());
@@ -528,11 +529,12 @@ public final class FSImageFormatProtobuf {
       } else {
         sectionOutputStream = underlyingOutputStream;
       }
-
+      //报存命名空间信息
       saveNameSystemSection(b);
       // Check for cancellation right after serializing the name system section.
       // Some unit tests, such as TestSaveNamespace#testCancelSaveNameSpace
       // depends on this behavior.
+      //检查是否取消保存操作
       context.checkCancelled();
 
       // Erasure coding policies should be saved before inodes
@@ -543,24 +545,28 @@ public final class FSImageFormatProtobuf {
 
       step = new Step(StepType.INODES, filePath);
       prog.beginStep(Phase.SAVING_CHECKPOINT, step);
+      //保存命名空间的inode信息
       saveInodes(b);
       long numErrors = saveSnapshots(b);
       prog.endStep(Phase.SAVING_CHECKPOINT, step);
 
       step = new Step(StepType.DELEGATION_TOKENS, filePath);
       prog.beginStep(Phase.SAVING_CHECKPOINT, step);
+      //保存安全信息
       saveSecretManagerSection(b);
       prog.endStep(Phase.SAVING_CHECKPOINT, step);
 
       step = new Step(StepType.CACHE_POOLS, filePath);
       prog.beginStep(Phase.SAVING_CHECKPOINT, step);
+      //保存缓存信息
       saveCacheManagerSection(b);
       prog.endStep(Phase.SAVING_CHECKPOINT, step);
-
+//保存StringTable
       saveStringTableSection(b);
 
       // We use the underlyingOutputStream to write the header. Therefore flush
       // the buffered stream (which is potentially compressed) first.
+      //flush输出信息
       flushSectionOutputStream();
 
       FileSummary summary = b.build();
