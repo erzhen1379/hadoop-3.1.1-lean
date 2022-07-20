@@ -330,11 +330,13 @@ public interface HdfsServerConstants {
      * NOTE, in some special cases, a block may be forced to COMPLETE state,
      * even if it doesn't have required minimal replications.
      */
+    //数据块的长度和时间戳不发生改变
     COMPLETE,
     /**
      * The block is under construction.<br>
      * It has been recently allocated for write or append.
      */
+    //文件写入或者追加操作
     UNDER_CONSTRUCTION,
     /**
      * The block is under recovery.<br>

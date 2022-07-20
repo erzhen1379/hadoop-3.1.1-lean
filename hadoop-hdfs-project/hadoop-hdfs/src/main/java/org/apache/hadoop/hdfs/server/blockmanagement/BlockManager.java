@@ -319,6 +319,7 @@ public class BlockManager implements BlockStatsMXBean {
       new BlockReportProcessingThread();
 
   /** Store blocks -> datanodedescriptor(s) map of corrupt replicas */
+  //损坏的数据块的副本
   final CorruptReplicasMap corruptReplicas = new CorruptReplicasMap();
 
   /**

@@ -56,7 +56,6 @@
     <file url="file://$PROJECT_DIR$/hadoop-tools/hadoop-kafka/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/hadoop-tools/hadoop-openstack/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/hadoop-tools/hadoop-resourceestimator/src/main/java" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/hadoop-tools/hadoop-resourceestimator/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/hadoop-tools/hadoop-rumen/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/hadoop-tools/hadoop-sls/src/main" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/hadoop-tools/hadoop-sls/src/main/java" charset="UTF-8" />
