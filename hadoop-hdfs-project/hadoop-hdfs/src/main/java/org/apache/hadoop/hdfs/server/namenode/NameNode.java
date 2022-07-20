@@ -204,7 +204,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_BACKOFF_ENABLE_DE
  * NameNode state, for example partial blocksMap etc.
  **********************************************************/
 @InterfaceAudience.Private
-public class NameNode extends ReconfigurableBase implements
+public class                                                                                                                                                                                            NameNode extends ReconfigurableBase implements
         NameNodeStatusMXBean {
   static{
     HdfsConfiguration.init();
