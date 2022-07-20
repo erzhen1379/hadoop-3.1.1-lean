@@ -227,6 +227,7 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
     } else if (curReplicas == 1) {
       // only one replica, highest risk of loss
       // highest priority
+      //当前数据块没有有效的副本，并且有些副本所在的datanode正处于离线状态
       return QUEUE_HIGHEST_PRIORITY;
     } else if ((curReplicas * 3) < expectedReplicas) {
       //can only afford one replica loss

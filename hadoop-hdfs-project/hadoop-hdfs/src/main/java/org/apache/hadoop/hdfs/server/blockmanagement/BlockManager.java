@@ -4631,16 +4631,19 @@ public class BlockManager implements BlockStatsMXBean {
     // It's OK to check safe mode here w/o holding lock, in the worst
     // case extra replications will be scheduled, and these will get
     // fixed up later.
+    //处于安全模式下不可以进行复制以及删除操作
     if (namesystem.isInSafeMode()) {
       return 0;
     }
-
+    //获取集群中所以datanode的数量
     final int numlive = heartbeatManager.getLiveDatanodeCount();
+    //计算出待复制操作的数据块的数量
     final int blocksToProcess = numlive
         * this.blocksReplWorkMultiplier;
+    //计算出进行删除操作的dn数量
     final int nodesToProcess = (int) Math.ceil(numlive
         * this.blocksInvalidateWorkPct);
-
+     //调用computeBlockReconstructionWork（）计算需要进行备份的副本
     int workFound = this.computeBlockReconstructionWork(blocksToProcess);
 
     // Update counters
@@ -4651,6 +4654,7 @@ public class BlockManager implements BlockStatsMXBean {
     } finally {
       namesystem.writeUnlock();
     }
+    //调用computeInvalidateWork（）计算需要进行删除的副本
     workFound += this.computeInvalidateWork(nodesToProcess);
     return workFound;
   }
